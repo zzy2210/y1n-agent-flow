@@ -231,6 +231,8 @@
     # y1n-flow:按模型分行的委派工具。角色身份由委派 prompt 注入
     # (契约在 y1n-flow skill 的 references/sub-agents/ 中),模型由行绑定;
     # 主代理在运行时按需选择工具行,角色与模型自由组合。
+    # gpt 行走 dsh-codex 订阅路由(openai-codex,ChatGPT OAuth),
+    # kimi 行走 opencode-go。
     - id: tool-subagent-gpt56
       name: '@deepseek-ai/dsh-tool-subagent'
       config:
@@ -238,7 +240,7 @@
         toolName: subagent_gpt56
         backgroundMode: continuable
         agentOptions:
-          provider: openai
+          provider: openai-codex
           model: gpt-5.6-sol
 
     - id: tool-subagent-gpt54
@@ -248,7 +250,7 @@
         toolName: subagent_gpt54
         backgroundMode: continuable
         agentOptions:
-          provider: openai
+          provider: openai-codex
           model: gpt-5.4
 
     - id: tool-subagent-kimi3

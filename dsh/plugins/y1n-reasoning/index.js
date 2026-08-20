@@ -4,11 +4,11 @@
 // 也无法声明档位;本插件在 `agent/request` 瀑布里为委派子代理补上档位:
 //
 //   - 思考类(设计/编码/评审/UI)用该模型的最大档:
-//       openai/gpt-5.6-sol → max
+//       openai-codex/gpt-5.6-sol → max
 //       opencode-go/kimi-k3 → max
 //       deepseek-official/deepseek-v4-pro → max
 //   - 探索类用中等档:
-//       openai/gpt-5.4 → medium
+//       openai-codex/gpt-5.4 → medium
 //
 // 规则:
 //   - 仅对委派子代理生效(session header 的 delegationDepth >= 1);主代理自身
@@ -20,10 +20,10 @@
 export const name = 'y1n-reasoning'
 
 const EFFORT_BY_ROUTE = {
-  'openai/gpt-5.6-sol': 'max',
+  'openai-codex/gpt-5.6-sol': 'max',
   'opencode-go/kimi-k3': 'max',
   'deepseek-official/deepseek-v4-pro': 'max',
-  'openai/gpt-5.4': 'medium',
+  'openai-codex/gpt-5.4': 'medium',
 }
 
 export function apply(ctx) {

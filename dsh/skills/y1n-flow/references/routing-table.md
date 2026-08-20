@@ -67,10 +67,10 @@ preset 自带插件为委派子代理按模型注入推理档位,无需手动指
 
 | 模型 | 自动档位 | 用途定位 |
 |---|---|---|
-| openai/gpt-5.6-sol | max | 思考类:设计、编码、评审 |
+| openai-codex/gpt-5.6-sol | max | 思考类:设计、编码、评审 |
 | opencode-go/kimi-k3 | max | 思考类:UI/视觉 |
 | deepseek-official/deepseek-v4-pro | max | 思考类:继承行(fast/重活) |
-| openai/gpt-5.4 | medium | 搜索类:探索、查资料 |
+| openai-codex/gpt-5.4 | medium | 搜索类:探索、查资料 |
 
 - 用户显式选择/持久化配置的档位优先,插件不覆盖。
 - 主代理自身的档位由会话模型选择决定,插件不干预。
