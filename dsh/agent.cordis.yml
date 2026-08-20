@@ -32,12 +32,16 @@
       - 你不是编码者:不直接读大量代码、不写业务实现、不写测试、不做代码评审;探索、设计、测试设计、编码、审查全部委派给角色子代理。
       - 子代理的原始输出只是供你润色和校验的材料,不是对用户的承诺。
 
-      委派工具(按模型分行,角色身份写在委派 prompt 里):
-      - subagent:子代理跟随你当前的模型(默认选择)。
-      - subagent_gpt56:gpt-5.6-sol,适合设计、编码、评审等重活。
-      - subagent_gpt54:gpt-5.4,适合探索、查资料等便宜活。
-      - subagent_kimi3:kimi-k3,适合 UI/前端视觉。
-      - subagent_fork:继承本会话历史的子代理。
+      委派工具(通用单工具,角色身份写在委派 prompt 里):
+      - subagent:唯一的委派工具。prompt 与 description 必填。
+      - provider 与 model 同时给出则子代理使用该模型路由;都省略则继承你当前模型。
+      - effort 可选(minimal/low/medium/high/xhigh/max);省略时按内置路由表注入:
+        openai-codex/gpt-5.6-sol→max、openai-codex/gpt-5.4→medium、opencode-go/kimi-k3→max、
+        deepseek-official/deepseek-v4-pro→max;显式指定时按目标模型支持范围校验。
+      - mode=fresh 开新上下文(默认);mode=fork 继承本会话历史。
+      - run_in_background 默认 true,返回可续接 id。
+      - 默认模型建议:设计/编码/评审→openai-codex/gpt-5.6-sol;探索/查资料→openai-codex/gpt-5.4;
+        UI/前端视觉→opencode-go/kimi-k3;快速局部修补→省略 provider/model 继承当前模型。
       角色契约(explorer/architect/writer/ui/fast/test-designer/code-reviewer/reviewer)在 y1n-flow skill 的 references/sub-agents/ 目录中;委派时把对应契约文本作为 prompt 的第一部分,再写具体任务。
 
       子代理生命周期:
@@ -108,11 +112,15 @@
     customSkillDirs:
       - !!js "process.getBuiltinModule('node:url').fileURLToPath(new URL('skills/', baseUrl))"
 
-# y1n-flow:preset 自带插件,为委派子代理按模型注入推理档位
-# (思考类 max、探索 medium);不干预主代理,子代理的路由默认档位同样被
-# 规则表覆盖。
-- id: y1n-reasoning
-  name: ./plugins/y1n-reasoning/index.js
+# y1n-flow:通用委派工具 + 思考档位注入(单一 `subagent` 工具,
+# provider/model/effort 运行时决定;无 effort 时按内置路由表注入,
+# 有 effort 时按 childId→effort 临时表注入并在执行前校验)。
+# 零依赖、松挂载:注入监听必须在预置作用域(会话作用域的祖先)
+# 才能收到子代理请求的 agent/request 事件。
+# 注意:`?rev=N` 是模块缓存版本号——修改插件文件后必须 +1,
+# 否则运行中的 dsh 进程会继续用缓存的旧模块(重启进程可清除)。
+- id: y1n-delegation
+  name: ./plugins/y1n-delegation/index.js?rev=2
 
 - id: tool-skill
   name: '@deepseek-ai/dsh-tool-skill'
@@ -214,54 +222,11 @@
     - id: tool-subagent-list-agents
       name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
-    - id: tool-subagent
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: subagent
-        backgroundMode: continuable
-
-    - id: tool-subagent-fork
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: fork
-        toolName: subagent_fork
-        backgroundMode: continuable
-
-    # y1n-flow:按模型分行的委派工具。角色身份由委派 prompt 注入
-    # (契约在 y1n-flow skill 的 references/sub-agents/ 中),模型由行绑定;
-    # 主代理在运行时按需选择工具行,角色与模型自由组合。
-    # gpt 行走 dsh-codex 订阅路由(openai-codex,ChatGPT OAuth),
-    # kimi 行走 opencode-go。
-    - id: tool-subagent-gpt56
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: subagent_gpt56
-        backgroundMode: continuable
-        agentOptions:
-          provider: openai-codex
-          model: gpt-5.6-sol
-
-    - id: tool-subagent-gpt54
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: subagent_gpt54
-        backgroundMode: continuable
-        agentOptions:
-          provider: openai-codex
-          model: gpt-5.4
-
-    - id: tool-subagent-kimi3
-      name: '@deepseek-ai/dsh-tool-subagent'
-      config:
-        provider: spawn
-        toolName: subagent_kimi3
-        backgroundMode: continuable
-        agentOptions:
-          provider: opencode-go
-          model: kimi-k3
+    # y1n-flow 的委派工具是松挂载的 y1n-delegation 插件(单工具
+    # `subagent`,provider/model/effort 均为运行时参数)。它必须留在
+    # 预置作用域而非本组:本组的 isolate realm 是会话作用域的兄弟
+    # 节点,收不到子代理请求的 agent/request 事件。子代理控制工具与
+    # workflow/ralph 仍在本组(workflowEngine 的 realm 归它们)。
 
     # Product providers are host-plane singletons. Copy this preset, then
     # remove `disabled` from either ordinary tool row to expose that product

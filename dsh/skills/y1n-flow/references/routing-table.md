@@ -1,18 +1,20 @@
 # y1n-flow 路由表(DSH 版)
 
-## 意图 → 角色 → 模型行
+## 意图 → 角色 → 模型
 
-| 用户意图关键词 | 角色 | 默认模型行(工具) | 说明 |
+`subagent` 是唯一的委派工具;模型与档位是它的运行时参数。
+
+| 用户意图关键词 | 角色 | 默认模型(工具参数) | 说明 |
 |---|---|---|---|
-| 看、查、探、找、搜、读、列、现状、结构、在哪 | explorer | `subagent_gpt54`(gpt-5.4) | 只读探索、代码现状、资料检索 |
-| commit、diff、log、历史、提交记录、hash、blame | explorer | `subagent_gpt54`(gpt-5.4) | 优先使用只读 git 命令读取提交和历史事实 |
-| 设计、方案、架构、拆、规划、取舍、怎么做 | architect | `subagent_gpt56`(gpt-5.6-sol) | 架构设计、执行拆解、原始设计材料 |
-| UI、界面、前端视觉、美化、改样式、交互优化、产品感、精致、好看 | ui | `subagent_kimi3`(kimi-k3) | 前端视觉与交互优化,加载 `ui-aesthetics` skill |
-| 写、实现、改、修、加、删、重构、落地、编码 | writer | `subagent_gpt56`(gpt-5.6-sol) | 编码实现、修复问题、补测试 |
-| 快改、快修、小改、局部修补、fast | fast | `subagent`(继承主代理模型) | 小范围快速修改,适合明确、局部、低风险任务 |
-| 测试设计、测试方案、BDD、Given/When/Then | test-designer | `subagent_gpt56`(gpt-5.6-sol) | 只写测试设计材料,不写代码;先确认 BDD=开启 |
-| 审代码、评审代码、review 代码、代码 review | code-reviewer | `subagent_gpt56`(gpt-5.6-sol) | 审变更,找真正重要的问题,给通过/不通过 |
-| 审方案、评审方案、审文档、review 文档 | reviewer | `subagent_gpt56`(gpt-5.6-sol) | 偏差审查(raw vs polished),只报告不改稿 |
+| 看、查、探、找、搜、读、列、现状、结构、在哪 | explorer | `subagent`(openai-codex/gpt-5.4) | 只读探索、代码现状、资料检索 |
+| commit、diff、log、历史、提交记录、hash、blame | explorer | `subagent`(openai-codex/gpt-5.4) | 优先使用只读 git 命令读取提交和历史事实 |
+| 设计、方案、架构、拆、规划、取舍、怎么做 | architect | `subagent`(openai-codex/gpt-5.6-sol) | 架构设计、执行拆解、原始设计材料 |
+| UI、界面、前端视觉、美化、改样式、交互优化、产品感、精致、好看 | ui | `subagent`(opencode-go/kimi-k3) | 前端视觉与交互优化,加载 `ui-aesthetics` skill |
+| 写、实现、改、修、加、删、重构、落地、编码 | writer | `subagent`(openai-codex/gpt-5.6-sol) | 编码实现、修复问题、补测试 |
+| 快改、快修、小改、局部修补、fast | fast | `subagent`(省略 provider/model,继承主模型) | 小范围快速修改,适合明确、局部、低风险任务 |
+| 测试设计、测试方案、BDD、Given/When/Then | test-designer | `subagent`(openai-codex/gpt-5.6-sol) | 只写测试设计材料,不写代码;先确认 BDD=开启 |
+| 审代码、评审代码、review 代码、代码 review | code-reviewer | `subagent`(openai-codex/gpt-5.6-sol) | 审变更,找真正重要的问题,给通过/不通过 |
+| 审方案、评审方案、审文档、review 文档 | reviewer | `subagent`(openai-codex/gpt-5.6-sol) | 偏差审查(raw vs polished),只报告不改稿 |
 
 ## 控制指令 → 开关
 
@@ -25,7 +27,7 @@
 | mixed / 前后端都要改 | 强制拆分 | ui + writer,声明写入范围并做冲突锁 |
 | 只改前端 | 锁定 ui | 禁止顺手改后端 |
 | 只改后端 | 锁定 writer | 禁止顺手改前端 |
-| 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 | 切换模型行 | 对应 `subagent_kimi3` / `subagent_gpt54` / `subagent_gpt56` / `subagent` |
+| 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 | 切换模型参数 | `subagent` 的 provider/model 参数对应 opencode-go/kimi-k3 / openai-codex/gpt-5.4 / openai-codex/gpt-5.6-sol / 省略继承 |
 
 ## 路由原则
 
@@ -55,34 +57,34 @@
 2. 如果存在共享写入点(接口 schema、共享类型、生成代码、共用契约文件等),必须额外拆出 `shared` 子任务,默认交给 writer,并与前后端串行(避免顺序错乱)。
 3. 每个子任务必须声明写入范围;同一文件或祖先/子孙目录不可并发。
 
-## 模型行选择提示
+## 模型选择提示
 
-- 默认按上表选择模型行;用户明确指定模型时,遵循用户指令切换工具行。
-- 某条模型行失败时,改派其他可用模型行完成同一角色任务,并向用户报告。
-- fast 角色恒用 `subagent`(继承主代理模型),以匹配"当前对话模型直接下场快速修补"的语义。
+- 默认按上表选择 provider/model;用户明确指定供应商/模型/档位时,直接按用户指令传参(无需改配置)。
+- 某组 provider/model 调用失败时,换其他可用路由完成同一角色任务,并向用户报告。
+- fast 角色恒省略 provider/model(继承主代理模型),以匹配"当前对话模型直接下场快速修补"的语义。
 
-## 推理档位(自动注入)
+## 推理档位(参数 + 自动注入)
 
-preset 自带插件为委派子代理按模型注入推理档位,无需手动指定:
+`subagent` 工具带可选 `effort` 参数;省略时由 preset 插件按内置路由表注入:
 
-| 模型 | 自动档位 | 用途定位 |
+| 模型 | 默认档位 | 用途定位 |
 |---|---|---|
 | openai-codex/gpt-5.6-sol | max | 思考类:设计、编码、评审 |
 | opencode-go/kimi-k3 | max | 思考类:UI/视觉 |
 | deepseek-official/deepseek-v4-pro | max | 思考类:继承行(fast/重活) |
 | openai-codex/gpt-5.4 | medium | 搜索类:探索、查资料 |
 
-- 用户显式选择/持久化配置的档位优先,插件不覆盖。
+- 显式传 `effort` 时按目标模型的支持范围校验,不支持会直接报错并列出可选档位。
 - 主代理自身的档位由会话模型选择决定,插件不干预。
-- 如需调整档位,编辑 `plugins/y1n-reasoning/index.js` 的 `EFFORT_BY_ROUTE` 表。
+- 如需调整默认档位,编辑 `plugins/y1n-delegation/index.js` 的 `EFFORT_BY_ROUTE` 表。
 
 ## 路由提示格式
 
 调用子代理前,先输出一行提示:
 
 ```text
-[路由] architect · subagent_gpt56 · gpt-5.6-sol
+[路由] architect · subagent · openai-codex/gpt-5.6-sol · max
 ```
 
-- 用 `subagent`(继承)时: `[路由] fast · subagent · 继承主代理模型`
-- 用 `subagent_kimi3` 时: `[路由] ui · subagent_kimi3 · kimi-k3`
+- 省略 provider/model(继承)时: `[路由] fast · subagent · 继承主代理模型`
+- 省略 effort(走默认表)时把档位写成 `默认→max` 之类的实际默认值。
