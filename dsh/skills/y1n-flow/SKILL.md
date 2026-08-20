@@ -37,22 +37,21 @@ description: 多模型编排开发流:主代理担任项目编排者,把探索/�
 
 ## 委派机制(DSH 特有,必读)
 
-### 委派工具 = 模型按钮
+### 委派工具 = 一个通用工具
 
-本预设注册了 4 个委派工具,按**模型**分行,不按角色:
+本预设只注册一个委派工具 `subagent`,模型与思考档位都是**运行时参数**:
 
-| 工具 | 子代理模型 | 推理档位(自动注入) | 典型用途 |
-|---|---|---|---|
-| `subagent` | 跟随主代理当前模型 | 按模型注入(见下) | 默认;fast 角色必须用它 |
-| `subagent_gpt56` | gpt-5.6-sol | **max** | 设计、编码、审查等重活 |
-| `subagent_gpt54` | gpt-5.4 | **medium** | 探索、查资料等便宜活 |
-| `subagent_kimi3` | kimi-k3 | **max** | UI/前端视觉 |
-
-档位由 preset 自带插件自动注入:思考类(设计/编码/评审/UI)用该模型的最大档,探索类用中等档;用户显式选择的档位优先,主代理自身档位不受影响。无需在委派时手动指定。
+| 参数 | 取值 | 说明 |
+|---|---|---|
+| `provider` + `model` | 都填 | 子代理用该模型路由(任意供应商/模型) |
+| `provider` + `model` | 都省略 | 继承主代理当前模型(fast 角色必须省略) |
+| `effort` | 省略 | 内置路由表自动注入:gpt-5.6-sol→max、gpt-5.4→medium、kimi-k3→max、deepseek-v4-pro→max |
+| `effort` | 显式 | 按目标模型支持范围校验,不支持会报错并列出可选档位 |
+| `mode` | fresh / fork | 新上下文 / 继承本会话历史 |
 
 **角色身份不在工具上**:角色契约(explorer/architect/writer/ui/fast/test-designer/code-reviewer/reviewer)在 `references/sub-agents/` 目录中。委派时,把对应契约全文作为 prompt 的第一部分,然后写具体任务(plan document 片段、验收标准、写入范围)。
 
-角色与模型自由组合:路由表只给建议。用户说"用 kimi 想想"或"这次用轻量模型",就换工具行。
+角色与模型自由组合:路由表只给建议。用户说"用 kimi 想想"或"这次用轻量模型",就换 provider/model 参数。
 
 ### 子代理生命周期(可续接)
 
@@ -80,6 +79,8 @@ description: 多模型编排开发流:主代理担任项目编排者,把探索/�
 6. mixed stage 必拆前后端子代理;同一文件或祖先/子孙目录不可并发写入。
 7. BDD 默认关闭;用户明确要求"要测试 / 走 BDD / 先设计测试"时才打开。
 8. fast 只豁免完整润色链,不豁免 review 回环。
+9. **委派失败必须上报**:子代理启动失败、上游返回错误、档位不支持、运行异常等,主代理必须把失败信息(现象 + 可选动作)汇报给用户并等待决定;不得静默重试、静默换模型、静默放弃后继续。此条不受"连续执行"开关影响。
+10. **审查问题必须由用户裁决**:code-reviewer 的 findings、reviewer 的偏差报告等审查问题,主代理必须把问题清单呈现给用户并等待决定(打回修复 / 接受 / 忽略);不得自行判断后静默进入修复回环。此条不受"连续执行"开关影响。
 
 主代理的行为边界:
 
@@ -126,9 +127,9 @@ description: 多模型编排开发流:主代理担任项目编排者,把探索/�
 
 ### 子代理使用顺序(固定)
 
-1. explorer:先拿到真实现状(文件路径、现有行为、约束证据)。默认用 `subagent_gpt54`。
-2. architect:基于现状给出原始设计材料(拆分、风险、待确认项、建议顺序)。默认用 `subagent_gpt56`。
-3. test-designer:仅当 BDD 开启时,产出原始测试设计材料(覆盖核心/边界场景与验收口径)。默认用 `subagent_gpt56`。
+1. explorer:先拿到真实现状(文件路径、现有行为、约束证据)。默认用 `subagent`(openai-codex/gpt-5.4)。
+2. architect:基于现状给出原始设计材料(拆分、风险、待确认项、建议顺序)。默认用 `subagent`(openai-codex/gpt-5.6-sol)。
+3. test-designer:仅当 BDD 开启时,产出原始测试设计材料(覆盖核心/边界场景与验收口径)。默认用 `subagent`(openai-codex/gpt-5.6-sol)。
 
 ### 设计阶段的输出规则
 
@@ -216,9 +217,9 @@ BDD(测试设计先行开关)默认关闭。
 
 只要一个阶段同时涉及前端与后端(mixed stage),必须拆成至少两个编码子任务:
 
-- 前端设计 → ui 角色(视觉方案、组件规格、交互定义),默认用 `subagent_kimi3`,并加载 `ui-aesthetics` skill。
+- 前端设计 → ui 角色(视觉方案、组件规格、交互定义),默认用 `subagent`(opencode-go/kimi-k3),并加载 `ui-aesthetics` skill。
 - 前端实现 → 由 writer 角色基于 ui 的设计产物执行,或由 ui 直接实现。
-- 后端/通用 → writer 角色,默认用 `subagent_gpt56`。
+- 后端/通用 → writer 角色,默认用 `subagent`(openai-codex/gpt-5.6-sol)。
 
 如果存在共享写入点(共享类型、接口 schema、生成客户端等),再额外拆一个 `shared` 子任务,默认串行执行(通常交给 writer)。
 
@@ -236,14 +237,15 @@ BDD(测试设计先行开关)默认关闭。
 编码类任务(writer / ui / fast)的完成判定必须走闭环:
 
 1. 编码完成后,主代理先把对应子任务/阶段标为 `[待验证]`。
-2. 委派 code-reviewer 做代码审查(输入包含:plan document 片段、验收标准、变更范围、diff/关键文件)。默认用 `subagent_gpt56`。
+2. 委派 code-reviewer 做代码审查(输入包含:plan document 片段、验收标准、变更范围、diff/关键文件)。默认用 `subagent`(openai-codex/gpt-5.6-sol)。
 3. 通过后,主代理才能把状态改为 `[x]`。
-4. 未通过则进入修复回环:把 findings 发回**原来的编码子代理**(用 `send_message` 唤醒,不要新开),只修复 findings,不扩大范围,修复后再次 `[待验证]` → review。
+4. 未通过时,**先把 findings 汇报给用户并等待决定**(打回修复 / 接受 / 忽略),不得自行判断后静默进入修复回环。用户决定打回后,才把 findings 发回**原来的编码子代理**(用 `send_message` 唤醒,不要新开),只修复 findings,不扩大范围,修复后再次 `[待验证]` → review。
 
 硬规则:
 
 1. 编码类任务完成后先标 `[待验证]`;只有 code-reviewer 通过后才标 `[x]`。
 2. fast 只豁免完整润色链,不豁免 review 回环。
+3. **审查问题必须由用户裁决**:见"核心原则"第 10 条,不受连续执行开关影响。
 
 ## fast 例外
 
@@ -265,17 +267,17 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 
 ### 现有硬路由
 
-| 用户意图关键词 | 角色 | 默认模型行 |
+| 用户意图关键词 | 角色 | 默认模型(`subagent` 参数) |
 |---|---|---|
-| 看 / 查 / 探 / 找 / 搜 / 读 / 列 / 现状 | explorer | `subagent_gpt54` |
-| commit / diff / log / 历史 / 提交记录 / hash / blame | explorer | `subagent_gpt54` |
-| 设计 / 方案 / 架构 / 拆 / 规划 / 怎么做 | architect | `subagent_gpt56` |
-| UI / 界面 / 前端视觉 / 美化 / 改样式 / 交互优化 | ui | `subagent_kimi3` |
-| 写 / 实现 / 改 / 修 / 加 / 删 / 重构 | writer | `subagent_gpt56` |
-| 快改 / 快修 / 小改 / 局部修补 / fast | fast | `subagent`(继承) |
-| 测试设计 / 测试方案 / BDD / Given / When / Then | test-designer(先开 BDD) | `subagent_gpt56` |
-| 审代码 / 评审代码 / review 代码 | code-reviewer | `subagent_gpt56` |
-| 审方案 / 评审方案 / 审文档 / review 文档 | reviewer | `subagent_gpt56` |
+| 看 / 查 / 探 / 找 / 搜 / 读 / 列 / 现状 | explorer | openai-codex/gpt-5.4 |
+| commit / diff / log / 历史 / 提交记录 / hash / blame | explorer | openai-codex/gpt-5.4 |
+| 设计 / 方案 / 架构 / 拆 / 规划 / 怎么做 | architect | openai-codex/gpt-5.6-sol |
+| UI / 界面 / 前端视觉 / 美化 / 改样式 / 交互优化 | ui | opencode-go/kimi-k3 |
+| 写 / 实现 / 改 / 修 / 加 / 删 / 重构 | writer | openai-codex/gpt-5.6-sol |
+| 快改 / 快修 / 小改 / 局部修补 / fast | fast | 省略 provider/model(继承) |
+| 测试设计 / 测试方案 / BDD / Given / When / Then | test-designer(先开 BDD) | openai-codex/gpt-5.6-sol |
+| 审代码 / 评审代码 / review 代码 | code-reviewer | openai-codex/gpt-5.6-sol |
+| 审方案 / 评审方案 / 审文档 / review 文档 | reviewer | openai-codex/gpt-5.6-sol |
 
 未命中关键词时,用语义判断;仍不确定时先问用户 1 个短问题。
 
@@ -290,7 +292,7 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 - mixed / 前后端都要改 → 强制拆分 ui + writer,声明写入范围并做冲突锁
 - 只改前端 → 锁定为 ui,禁止顺手改后端
 - 只改后端 → 锁定为 writer,禁止顺手改前端
-- 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 → 切换对应的模型工具行
+- 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 → 切换 `subagent` 的 provider/model 参数(对应 opencode-go/kimi-k3 / openai-codex/gpt-5.4 / openai-codex/gpt-5.6-sol / 省略继承)
 
 ## 异常处理与等待策略
 
@@ -319,9 +321,19 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 - 子代理仍在运行时,不得把重叠的写入范围派给另一个子代理。
 - 冲突无法避免时,宁可保守串行,不要冒进并发。
 
+### 委派失败上报(红线,不受连续执行开关影响)
+
+子代理启动失败、上游返回错误、档位不支持、运行异常时:
+
+1. **立即停下执行流**,不要把失败吞掉继续下一步。
+2. 向用户汇报:失败现象(哪次委派、哪个 provider/model、错误信息摘要)+ 可选动作(重试同一路由 / 换模型 / 换角色拆分 / 放弃该子任务)+ 你的建议。
+3. 等用户明确决定后再行动;只有用户授权后才允许重试或换路由重派。
+4. 失败与决定要同步记入 plan document(`[!]` 标记)。
+
 ### 模型不可用兜底
 
-- 某条模型路由失败(工具行报错)时,不要反复重试同一行;改派其他模型行完成同一角色任务,并向用户报告。
+- 某条模型路由失败时,按上面的红线处理:先上报等决定,**不要静默改派**。
+- 用户授权改派后,换其他可用路由完成同一角色任务,并报告结果。
 - 不确定当前可用模型时,向用户确认,不要猜。
 
 ## 输出要求
@@ -335,7 +347,7 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 调用子代理时,先给一行路由提示,方便用户理解你在做什么:
 
 ```text
-[路由] explorer · subagent_gpt54 · gpt-5.4
+[路由] explorer · subagent · openai-codex/gpt-5.4 · medium
 ```
 
 阶段暂停模式下,你每完成一个阶段要显式停下并问一句确认,例如:
