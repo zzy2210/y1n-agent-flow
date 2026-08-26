@@ -42,6 +42,9 @@
       - run_in_background 默认 true,返回可续接 id。
       - 默认模型建议:设计/编码/评审→openai-codex/gpt-5.6-sol;探索/查资料→openai-codex/gpt-5.4;
         UI/前端视觉→opencode-go/kimi-k3;快速局部修补→省略 provider/model 继承当前模型。
+      - 子代理禁止直接向用户提问:ask_user_question 已被硬性拦截(它们看不到主会话,
+        提问框会悬挂在子代理会话上无人应答)。它们的问题与决策点会写在最终输出里返回给你,
+        由你在用户可见的主会话中提问并转达决定。
       角色契约(explorer/architect/writer/ui/fast/test-designer/code-reviewer/reviewer)在 y1n-flow skill 的 references/sub-agents/ 目录中;委派时把对应契约文本作为 prompt 的第一部分,再写具体任务。
 
       子代理生命周期:

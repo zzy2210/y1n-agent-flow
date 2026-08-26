@@ -29,6 +29,15 @@ const EFFORT_HINT = [
   '显式指定时按目标模型的支持范围校验,不支持会报错并列出可选档位。',
 ].join(' ')
 
+// 追加到每一次委派 prompt 末尾的约束:子代理不得直接向用户提问。
+const DELEGATE_RULE = [
+  '【委派约束·必须遵守】',
+  '你不得调用 ask_user_question 或任何面向用户的提问/确认工具(调用会被直接拒绝,',
+  '且你看不到主会话,提问框会悬挂在子代理会话上无人应答)。',
+  '你的所有问题、决策点、待确认项,一律写进最终输出:现象 + 影响 + 可选动作 + 建议,',
+  '由父代理在用户可见的主会话中提问并向你转达决定。',
+].join('')
+
 /** 与官方 dsh-tool-subagent 一致的 canonical 输出契约,保证 send_message/list_agents 兼容。 */
 const OUTPUT_SCHEMA = {
   oneOf: [
@@ -94,6 +103,19 @@ export function apply(ctx) {
   // 本次显式档位:子会话 id → effort。仅在 startContinuable 返回 childId
   // 之后、子代理首个请求之前写入,注入命中即删,无长驻状态。
   const pendingEffort = new Map()
+
+  // 0) 提问拦截:子代理(delegationDepth >= 1)禁止直接调用 ask_user_question。
+  //    提问框会挂在子代理会话上,用户在主会话看不到,任务会悬挂无人应答;
+  //    返回的中文原因会作为工具错误回到子代理模型,促使它把问题写进最终
+  //    输出交回父代理,由主代理在用户可见的主会话中提问。守卫挂在当前
+  //    (preset)作用域层,只影响本预设下的 agent,不影响其他预设。
+  const disposeAskGuard = tools.guard((execution) => {
+    if (execution.name !== 'ask_user_question') return undefined
+    const header = execution.agent?.session?.header
+    if (typeof header?.delegationDepth !== 'number' || header.delegationDepth < 1) return undefined
+    return '子代理禁止调用 ask_user_question:你看不到主会话,提问会悬挂在子代理会话上无人应答。请把问题(现象+影响+可选动作+建议)写进你的最终输出,返回给父代理,由它在用户可见的主会话中向你转达决定。'
+  })
+  ctx.effect(() => disposeAskGuard)
 
   // 1) 注入监听:对 y1n-flow 下所有委派子代理生效(delegationDepth >= 1)。
   ctx.on('agent/request', async (payload, next) => {
@@ -216,7 +238,7 @@ export function apply(ctx) {
 
       const request = {
         label: args.description,
-        prompt: [{ type: 'text', text: args.prompt }],
+        prompt: [{ type: 'text', text: args.prompt + '\n\n' + DELEGATE_RULE }],
         parent,
         ...(agentOptions !== undefined ? { agentOptions } : {}),
         maxDepth: 3,
