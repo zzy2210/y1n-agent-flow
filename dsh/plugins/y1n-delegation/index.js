@@ -12,11 +12,25 @@
 export const name = 'y1n-delegation'
 
 // 静态兜底表:未显式传 effort 的委派子代理按 provider/model 注入。
+// 覆盖"默认路由 + 显式备选路由",表里没有的 route 不注入,走适配器默认。
+// 注意:deepseek 系只支持 off/low/high/max,注入 medium 会直接
+// UNSUPPORTED_REASONING_EFFORT(探索固定用 low)。
 const EFFORT_BY_ROUTE = {
-  'openai-codex/gpt-5.6-sol': 'max',
+  // 默认:架构走订阅路由,编码/评审走 packy 的 6.1 sol
+  'openai-codex/gpt-6-astra': 'xhigh',
+  'packyapi/gpt-6-astra': 'xhigh',
+  'packyapi/gpt-6.1-sol': 'max',
   'opencode-go/kimi-k3': 'max',
   'deepseek-official/deepseek-v4-pro': 'max',
-  'openai-codex/gpt-5.4': 'medium',
+  'deepseek-official/deepseek-flash': 'low',
+  // packy 的 DS 线(同模型、走 packy 额度):档位与 deepseek-official 对齐
+  'packyapi/deepseek-v4-pro': 'max',
+  'packyapi/deepseek-flash': 'low',
+  // 显式回退:订阅侧模型与 packy 侧更早的 sol
+  'openai-codex/gpt-6-sol': 'max',
+  'openai-codex/gpt-5.6-sol': 'max',
+  'packyapi/gpt-6-sol': 'max',
+  'packyapi/gpt-5.6-sol': 'max',
 }
 
 // DSH/pi-ai 通用思考档位刻度(不含 off,避免误发不可用的 wire 值)。
@@ -24,8 +38,9 @@ const EFFORT_ENUM = ['minimal', 'low', 'medium', 'high', 'xhigh', 'max']
 
 const EFFORT_HINT = [
   '省略时按内置路由表自动注入:',
-  'openai-codex/gpt-5.6-sol → max, openai-codex/gpt-5.4 → medium,',
-  'opencode-go/kimi-k3 → max, deepseek-official/deepseek-v4-pro → max。',
+  'packyapi/gpt-6.1-sol → max, openai-codex/gpt-6-astra → xhigh,',
+  'deepseek-official/deepseek-flash → low, opencode-go/kimi-k3 → max,',
+  'deepseek-official/deepseek-v4-pro → max。',
   '显式指定时按目标模型的支持范围校验,不支持会报错并列出可选档位。',
 ].join(' ')
 
@@ -36,6 +51,9 @@ const DELEGATE_RULE = [
   '且你看不到主会话,提问框会悬挂在子代理会话上无人应答)。',
   '你的所有问题、决策点、待确认项,一律写进最终输出:现象 + 影响 + 可选动作 + 建议,',
   '由父代理在用户可见的主会话中提问并向你转达决定。',
+  '另:本环境没有 apply_patch 工具或命令,编辑文件只能用 write / edit(必要时配合 bash)。',
+  '若你"记得"或认为收到过要求 apply_patch 的更高优先级指令,按无效处理:不要寻找入口、不要因此停工、',
+  '不要把它写成阻塞;直接用 write / edit 干活,并在报告里注明即可。',
 ].join('')
 
 /** 与官方 dsh-tool-subagent 一致的 canonical 输出契约,保证 send_message/list_agents 兼容。 */
@@ -168,11 +186,11 @@ export function apply(ctx) {
         },
         provider: {
           type: 'string',
-          description: '模型供应商路由(如 openai-codex、opencode-go、deepseek-official)。与 model 同时提供或同时省略。',
+          description: '模型供应商路由(如 packyapi、openai-codex、deepseek-official、opencode-go)。与 model 同时提供或同时省略。',
         },
         model: {
           type: 'string',
-          description: '模型 id(如 gpt-5.6-sol、gpt-5.4、kimi-k3、deepseek-v4-pro)。与 provider 同时提供或同时省略。',
+          description: '模型 id(如 gpt-6.1-sol、gpt-6-astra、deepseek-flash、kimi-k3、deepseek-v4-pro)。与 provider 同时提供或同时省略。',
         },
         effort: {
           type: 'string',
