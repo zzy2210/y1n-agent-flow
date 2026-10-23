@@ -56,7 +56,7 @@
 
 ## 规范要求
 
-1. 所有实现任务先阅读 `~/.dsh/.agent-presets/y1n-flow/skills/y1n-flow/references/implementation-rigor.md`(若该路径不存在,请主代理提供其内容)。
-2. 如果任务涉及 Go,先阅读同目录 `go-rules.md`。
-3. 如果任务涉及 Rust,先阅读同目录 `rust-rules.md`。
-4. 如果任务涉及前端视觉与交互质量,先加载 `ui-aesthetics` skill。
+1. 开工前先加载 skill `implementation-rigor`(所有语言通用)。
+2. 再按任务语言加载对应规范 skill:Rust → `rust-engineering`;Go → `go-engineering`。
+3. 如果任务涉及前端视觉与交互质量,加载 `ui-aesthetics` skill。
+4. skill 不可见或加载失败时,立即停下回报主代理,不要凭记忆动手。

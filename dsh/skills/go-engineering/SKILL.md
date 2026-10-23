@@ -1,3 +1,8 @@
+---
+name: go-engineering
+description: 编写、修改或审查 Go 代码时使用。包含定义项(结构体/常量/全局变量)逐项中文注释、禁止通过出参隐式赋值、OpenAPI 文档生成等硬性规范。writer / fast / code-reviewer 处理 .go 文件前必须加载。
+---
+
 # Go 编码规范
 
 以下规则在编写或审查 Go 代码时必须遵循。

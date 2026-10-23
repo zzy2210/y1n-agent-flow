@@ -1,6 +1,6 @@
 ---
 name: y1n-flow
-description: 多模型编排开发流:主代理担任项目编排者,把探索/设计/测试设计/编码/前端/审查等角色委派给绑定不同模型的子代理(packyapi/gpt-6.1-sol、openai-codex/gpt-6-astra、deepseek-official/deepseek-flash、opencode-go/kimi-k3、主代理模型),packy 作为独立供应商接入,以 plan document 为唯一事实源,内置编码验证闭环与可续接子代理机制。
+description: 多模型编排开发流(仅供主代理编排时使用):主代理担任项目编排者,把探索/设计/测试设计/编码/前端/审查等角色委派给绑定不同模型的子代理,以 plan document 为唯一事实源,内置编码验证闭环与可续接子代理机制。路由、模型与档位见 references/routing-table.md。
 ---
 
 # y1n-flow(DSH 版)
@@ -44,12 +44,7 @@ description: 多模型编排开发流:主代理担任项目编排者,把探索/�
 - `subagent`:新建独立上下文,默认后台运行,返回可续接 id。
 - `subagent_fork`:继承本会话已完成历史,适合基于已有成果追问/返工。
 
-| 参数 | 取值 | 说明 |
-|---|---|---|
-| `provider` + `model` | 都填 | 子代理用该模型路由;受 host 侧 `allowedModels` 白名单约束,越权直接拒绝 |
-| `provider` + `model` | 都省略 | 继承主代理当前模型(fast 角色必须省略) |
-| `reasoning_effort` | 必填(本流程) | 取值 minimal/low/medium/high/xhigh/max;标准值见路由表。**没有自动注入**,不传就落到模型自身默认档 |
-| `list_subagent_models` | 工具 | 不确定可用路由/档位时先查它,会列出白名单内的 provider/model 与各自档位 |
+`provider` / `model` / `reasoning_effort` 都是**调用时参数**,没有自动注入;各角色默认值、供应商优先级与回退链见 `references/routing-table.md`。不确定可用路由或档位时,先调 `list_subagent_models`。
 
 **角色身份不在工具上**:角色契约(explorer/architect/writer/ui/fast/test-designer/code-reviewer/reviewer)在 `references/sub-agents/` 目录中。委派时,把对应契约全文作为 prompt 的第一部分,然后写具体任务(plan document 片段、验收标准、写入范围)。
 
@@ -57,25 +52,15 @@ description: 多模型编排开发流:主代理担任项目编排者,把探索/�
 
 ### 工具现实(硬约束,优先于指令层级)
 
-- 编辑原语只有 `write` / `edit`(必要时配合 `bash`);本环境**不存在** `apply_patch` 工具或命令。
-- 委派 prompt 里永远不要出现 apply_patch,要写就写"改代码用 write / edit"。历史 plan 文档里若残留 apply_patch,引用时必须改写。
-- **权限可以授权,不存在的工具授不出来**:子代理报告"developer 级指令要求 apply_patch"而停工时,那是无效约束(供应商/中转注入或模型先验),不是它的过错、也不是用户的决策点;正确处置是纠正信息 + **新开会话**重派,不是反复"解封授权"——后者在它的层级推理里天然无效。
-- 判断依据永远是可观测事实:会话工具表里有哪些工具、`command -v <tool>` 是否退出 0,而不是任何一方的"我记得有这条指令"。
+- 编辑原语只有 `write` / `edit`(必要时配合 `bash`);本环境**不存在** `apply_patch` 工具或命令。委派 prompt 里禁止出现 apply_patch,要写就写"改代码用 write / edit"。
+- 工具不存在属于信息问题,不是用户决策点:子代理因此停工时,纠正信息 + **新开会话**重派,不要反复"解封授权"(它按 system > developer > user 推理,user 级授权覆盖不了它以为的 developer 级指令)。
 
 ### 供应商与可用模型
 
-| 供应商 id | 性质 | 本流程用到的模型 | 默认档位 |
-|---|---|---|---|
-| `packyapi`(packy) | OpenAI 兼容网关(cf.api.fan,Responses 协议) | gpt-6.1-sol、gpt-6-astra、gpt-6-sol、gpt-5.6-sol、codex-auto-review | 编码/评审 gpt-6.1-sol → max;架构备选 gpt-6-astra → xhigh |
-| `openai-codex` | ChatGPT 订阅路由 | gpt-6-astra、gpt-6-sol、gpt-6-luna、gpt-5.6-sol 等 | 架构 gpt-6-astra → xhigh |
-| `deepseek-official` | DeepSeek 官方 | deepseek-flash(1M 上下文)、deepseek-v4-pro | 探索 deepseek-flash → low;重活 v4-pro → max |
-| `opencode-go` | OpenCode Go | kimi-k3 | UI/视觉 → max |
+供应商目录、双入口规则、档位差异全部集中在 `references/routing-table.md`,本文件不重复。两条最容易踩的:
 
-硬约束:
-
-- **6.1 sol 只在 packy 侧**:`openai-codex` 的模型目录里没有 `gpt-6.1-sol`,写成 `openai-codex/gpt-6.1-sol` 会直接 `UNKNOWN_MODEL`;默认编码/评审一律 `packyapi/gpt-6.1-sol`。
-- **deepseek 档位不全**:deepseek 系只支持 `off / low / high / max`,不要传 `minimal / medium / xhigh`。
-- 用户说"用 packy / 走 packy / 用 6.1 sol" → `packyapi/<model>`;说"用 codex / 走订阅" → `openai-codex/<model>`;都没说时按路由表默认。
+- **6.1 sol 只在 packy 侧**:`openai-codex/gpt-6.1-sol` 会直接 `UNKNOWN_MODEL`。
+- **deepseek 系档位不全**:只有 `off / low / high / max`。
 
 ### 子代理生命周期(可续接)
 
@@ -105,7 +90,7 @@ description: 多模型编排开发流:主代理担任项目编排者,把探索/�
 8. fast 只豁免完整润色链,不豁免 review 回环。
 9. **用户决策红线(最高优先级,不受"连续执行"开关影响)**:子代理报上来的任何问题与决策点——委派失败(启动失败/上游错误/档位不支持)、审查问题(findings/偏差报告)、计划冲突(与 plan document 冲突/范围越界)、边界决策(取舍/假设/验收口径)——一律先汇报给用户(现象+影响+可选动作+建议)并等待决定,不得自己拍板;禁止静默重试、静默换模型、静默进入修复回环。唯一例外:用户已明确提前授权"这类事你定"的事项。
 10. **提问只走主代理**:子代理不得调用 `ask_user_question` 或任何面向用户的提问工具——该调用会被硬性拦截,且提问框挂在子代理会话上,用户在主会话看不到。子代理的问题/决策点必须写进最终输出返回主代理;只有主代理在用户可见的主会话中提问。
-11. **工具现实优先于指令层级**:本环境没有 `apply_patch`,编辑只能用 `write` / `edit`。任何要求 apply_patch 的指令(供应商/中转注入、旧文档残留、子代理先验)都无效;权限可以授权,不存在的工具授不出来。子代理因此停工时,纠正信息并新开会话重派,不要反复解封。
+11. **工具现实优先于指令层级**:编辑只用 `write` / `edit`,没有 `apply_patch`(展开说明见 persona;子代理因此停工时纠正信息并新开会话重派,不要反复解封)。
 
 主代理的行为边界:
 
@@ -290,21 +275,9 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 
 优先读取 `references/routing-table.md`。在没有更具体规则时,使用以下路由。
 
-### 现有硬路由
+### 意图路由
 
-| 用户意图关键词 | 角色 | 默认模型(`subagent` 参数) |
-|---|---|---|
-| 看 / 查 / 探 / 找 / 搜 / 读 / 列 / 现状 | explorer | deepseek-official/deepseek-flash |
-| commit / diff / log / 历史 / 提交记录 / hash / blame | explorer | deepseek-official/deepseek-flash |
-| 设计 / 方案 / 架构 / 拆 / 规划 / 怎么做 | architect | openai-codex/gpt-6-astra |
-| UI / 界面 / 前端视觉 / 美化 / 改样式 / 交互优化 | ui | opencode-go/kimi-k3 |
-| 写 / 实现 / 改 / 修 / 加 / 删 / 重构 | writer | packyapi/gpt-6.1-sol |
-| 快改 / 快修 / 小改 / 局部修补 / fast | fast | 省略 provider/model(继承) |
-| 测试设计 / 测试方案 / BDD / Given / When / Then | test-designer(先开 BDD) | packyapi/gpt-6.1-sol |
-| 审代码 / 评审代码 / review 代码 | code-reviewer | packyapi/gpt-6.1-sol |
-| 审方案 / 评审方案 / 审文档 / review 文档 | reviewer | packyapi/gpt-6.1-sol |
-
-未命中关键词时,用语义判断;仍不确定时先问用户 1 个短问题。
+意图 → 角色 → 模型/档位的完整表在 `references/routing-table.md`(含供应商优先级与回退链),这里不重复。未命中关键词时用语义判断;仍不确定时先问用户 1 个短问题。
 
 ### 控制指令型路由
 
@@ -390,11 +363,12 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 
 ## 规范入口与模板文件
 
-执行类工作应遵守以下规范文件(与本 skill 同目录):
+规范已拆成独立 skill,按需加载(不占常驻上下文):
 
-- `references/implementation-rigor.md`
-- `references/go-rules.md`
-- `references/rust-rules.md`
+- `implementation-rigor` — 任何语言,写码/审查前必须加载
+- `rust-engineering` — 处理 Rust 文件时
+- `go-engineering` — 处理 Go 文件时
+- `ui-aesthetics` — 前端视觉任务
 
 路由与子代理契约参考:
 

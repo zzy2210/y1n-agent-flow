@@ -1,3 +1,8 @@
+---
+name: rust-engineering
+description: "编写、修改或审查 Rust 代码时使用。包含禁止 unwrap/expect、unsafe 与 SAFETY 注释、crate 绝对路径(crate::)、禁止全局状态、显式 context、trait 克制(YAGNI)、不用 mod.rs、OpenAPI 文档生成等硬性规范。writer / fast / code-reviewer 处理 .rs 文件前必须加载。"
+---
+
 # Rust 编码规范
 
 以下规则在编写或审查 Rust 代码时必须遵循。

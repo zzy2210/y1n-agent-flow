@@ -1,3 +1,9 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# 已冻结:本文件是 y1n-flow 的早期单文件形态,DSH 不再挂载它。
+# 现行组合入口是同目录的 preset.cordis.yml(persona / 工具行 / 路由均以那份为准)。
+# 保留原因:作为人员编排与模型路由的历史参考;要改流程请改 preset.cordis.yml。
+# ─────────────────────────────────────────────────────────────────────────────
+
 # The `standard` agent preset: the full coding agent, mounted once per process.
 #
 # This file is an AGENT-PLANE composition. The roster mounts it ONCE under a

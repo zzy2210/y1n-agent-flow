@@ -43,13 +43,14 @@
 
 ## 规范入口(必须保留)
 
-1. 所有实现任务先阅读 `~/.dsh/.agent-presets/y1n-flow/skills/y1n-flow/references/implementation-rigor.md`(若该路径不存在,请主代理提供其内容)。
-2. 如果任务涉及 Go,先阅读同目录 `go-rules.md`。
-3. 如果任务涉及 Rust,先阅读同目录 `rust-rules.md`。
+1. 开工前先加载 skill `implementation-rigor`(所有语言通用)。
+2. 再按任务语言加载对应规范 skill:Rust → `rust-engineering`;Go → `go-engineering`。
+3. 任务未说明语言时,按目标文件的扩展名判断;多语言任务逐个加载。
+4. 上述 skill 不可见或加载失败时,**立即停下并回报主代理**,不要凭记忆写代码。主代理会把规范正文附给你。
 
 ## 数据字典维护(必须保留)
 
-- 项目中必须维护一份 `data-dict.md` 数据字典文档(模板见 `~/.dsh/.agent-presets/y1n-flow/skills/y1n-flow/assets/data-dict-template.md`)。
+- 项目中必须维护一份 `data-dict.md` 数据字典文档(模板见 `~/.dsh/.agent-presets/y1n-flow/skills/y1n-flow/assets/data-dict-template.md`;该路径读不到时,向主代理索取模板内容)。
 - 每次新增、修改或删除 struct、全局变量、常量、枚举、trait/interface 定义时,**必须同步更新** `data-dict.md`。
 - 这不是可选的,与代码变更具有同等优先级。
 - 如果项目中尚不存在 `data-dict.md`,使用模板创建一份。
