@@ -4,7 +4,7 @@
 
 ## 意图 → 角色 → 模型
 
-`subagent` / `subagent_fork` 是委派工具;模型与档位都是它们的运行时参数。
+`subagent` / `subagent_fork` 是委派工具。只有 `subagent` 开放模型与档位参数;`subagent_fork` 继承已完成历史和父代理模型,不接受模型选择参数。
 
 | 用户意图关键词 | 角色 | 默认模型(工具参数) | 说明 |
 |---|---|---|---|
@@ -123,7 +123,7 @@
 
 ## 推理档位(调用时显式传 `reasoning_effort`)
 
-原生 `subagent` / `subagent_fork` 的档位是**调用时参数**,没有自动注入:不传就落到目标模型自身的默认档。委派时按下表显式给出:
+`subagent` 的档位是**调用时参数**,没有角色档位自动注入;省略时由 DSH 根据路由继承兼容配置或使用目标模型默认档。需要下表的角色档位时显式传入。`subagent_fork` 不接受 `reasoning_effort`,需要指定档位时改用 `subagent`:
 
 | 模型 | 标准档位 | 用途定位 |
 |---|---|---|
@@ -151,8 +151,9 @@
 [路由] architect · subagent · packyapi/gpt-6-astra · xhigh
 [路由] writer · subagent · packyapi/gpt-6.1-sol · xhigh
 [路由] explorer · subagent · deepseek-official/deepseek-flash · low
-[路由] reviewer · subagent_fork · packyapi/gpt-6.1-sol · max
+[路由] reviewer · subagent · packyapi/gpt-6.1-sol · max
 ```
 
 - 省略 provider/model(继承)时: `[路由] fast · subagent · 继承主代理模型`
+- 继承已有对话时: `[路由] reviewer · subagent_fork · 继承主代理模型与档位`
 - 档位必须写成实际传入的 `reasoning_effort` 值(没有自动注入,写什么就是什么)。

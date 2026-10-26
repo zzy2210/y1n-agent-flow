@@ -215,34 +215,25 @@
           - id: tool-subagent-list-agents
             name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
 
-          # 委派工具:DSH 原生 tool-subagent(单工具 `subagent`),provider /
-          # model / reasoning_effort 都是调用时参数,由主代理现场决定。
+          # 委派工具:DSH 原生 tool-subagent。spawn 开启模型选择,
+          # provider / model / reasoning_effort 由主代理在调用时决定。
           # 路由白名单在 host 侧 subagent-model-selection-settings 配置,
           # 越权路由会被直接拒绝(不只是提示)。
-          # toolFilter 只作用于**子代理的工具集**:deny ask_user_question 让
-          # 子代理根本看不到提问工具(比事后拦截更彻底)。
+          # DSH 0.2.1-rc.2 已移除 toolFilter;运行时会以 DELEGATED_CALLER
+          # 拒绝子代理提问,问题仍须交回主代理。委派生命周期由运行时管理。
           - id: tool-subagent-spawn
             name: '@deepseek-ai/dsh-tool-subagent'
             config:
               provider: spawn
               toolName: subagent
               modelSelectionSettings: true
-              enableRunInBackground: true
-              backgroundMode: continuable
-              toolFilter:
-                deny:
-                  - ask_user_question
 
-          # fork = 继承本会话已完成历史的子代理(原生同款工具的第二个实例)
+          # fork 继承已完成历史和父代理模型,不启用独立模型或预设选择。
           - id: tool-subagent-fork
             name: '@deepseek-ai/dsh-tool-subagent'
             config:
               provider: fork
               toolName: subagent_fork
-              backgroundMode: continuable
-              toolFilter:
-                deny:
-                  - ask_user_question
 
           # Product providers are host-plane singletons. Copy this preset, then
           # remove `disabled` from either ordinary tool row to expose that product
@@ -253,7 +244,6 @@
             config:
               provider: codex
               toolName: subagent_codex
-              enableRunInBackground: false
               maxDepth: provider-managed
 
           - id: tool-subagent-claude-code
@@ -262,7 +252,6 @@
             config:
               provider: claude-code
               toolName: subagent_claude_code
-              enableRunInBackground: false
               maxDepth: provider-managed
 
           - id: workflow-worker-thread

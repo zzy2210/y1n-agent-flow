@@ -21,10 +21,10 @@ y1n-flow —— 多模型编排开发流的 DSH(DeepSeek Harness)预设配置仓
 
 预设挂的是 DSH 原生 `tool-subagent` 的两个实例:
 
-- `subagent`(provider `spawn`)——新建上下文,默认后台运行,返回可续接 id
-- `subagent_fork`(provider `fork`)——继承本会话已完成历史
+- `subagent`(provider `spawn`)——新建上下文,由运行时管理执行并返回可续接 id
+- `subagent_fork`(provider `fork`)——继承本会话已完成历史和父代理模型
 
-`provider` / `model` / `reasoning_effort` 都是调用时参数,**没有自动注入**,档位必须显式传。可用路由由 host 侧白名单约束:
+只有 `subagent` 开启模型选择:`provider` / `model` / `reasoning_effort` 是调用时参数,**没有角色档位自动注入**,指定角色模型时应显式传档位。`subagent_fork` 不开放这些参数;需要切换模型或档位时使用 `subagent`,并补全任务上下文。可用路由由 host 侧白名单约束:
 
 ```yaml
 # ~/.dsh/profiles/web/cordis.patch.yml
@@ -36,7 +36,9 @@ y1n-flow —— 多模型编排开发流的 DSH(DeepSeek Harness)预设配置仓
       # …
 ```
 
-子代理的工具集由 `toolFilter` 收口(当前 `deny: [ask_user_question]`,子代理看不到提问工具)。
+配置已适配 DSH `0.2.1-rc.2`。该版本不再支持 `toolFilter`,运行时会以 `DELEGATED_CALLER` 拒绝仍由父代理管理的子代理调用 `ask_user_question`;子代理应把问题交回主代理。这里依赖原生调用校验,不保证工具在子代理目录中隐藏。
+
+委派由运行时统一管理,完成后发送结果通知;配置中不再保留旧的 `enableRunInBackground` / `backgroundMode` 字段。若将来需要独立的子代理工具集,应声明单独的 Agent Preset 并在 spawn 配置中指定 `agentPreset`;fork 不支持独立预设选择。
 
 ## 上下文分层(为什么 persona 很短)
 
