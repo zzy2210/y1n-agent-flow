@@ -59,7 +59,7 @@ description: 多模型编排开发流(仅供主代理编排时使用):主代理�
 
 供应商目录、双入口规则、档位差异全部集中在 `references/routing-table.md`,本文件不重复。两条最容易踩的:
 
-- **6.1 sol 只在 packy 侧**:`openai-codex/gpt-6.1-sol` 会直接 `UNKNOWN_MODEL`。
+- **sol 线只在 packy 侧**:`openai-codex` 没有 `gpt-6.1-sol` 也没有 `gpt-6.2-sol`,写成 `openai-codex/<sol 模型>` 会直接 `UNKNOWN_MODEL`。
 - **deepseek 系档位不全**:只有 `off / low / high / max`。
 
 ### 子代理生命周期(可续接)
@@ -139,7 +139,7 @@ description: 多模型编排开发流(仅供主代理编排时使用):主代理�
 
 1. explorer:先拿到真实现状(文件路径、现有行为、约束证据)。默认用 `subagent`(deepseek-official/deepseek-flash)。
 2. architect:基于现状给出原始设计材料(拆分、风险、待确认项、建议顺序)。默认用 `subagent`(openai-codex/gpt-6-astra)。
-3. test-designer:仅当 BDD 开启时,产出原始测试设计材料(覆盖核心/边界场景与验收口径)。默认用 `subagent`(packyapi/gpt-6.1-sol)。
+3. test-designer:仅当 BDD 开启时,产出原始测试设计材料(覆盖核心/边界场景与验收口径)。默认用 `subagent`(packyapi/gpt-6.2-sol)。
 
 ### 设计阶段的输出规则
 
@@ -229,7 +229,7 @@ BDD(测试设计先行开关)默认关闭。
 
 - 前端设计 → ui 角色(视觉方案、组件规格、交互定义),默认用 `subagent`(opencode-go/kimi-k3),并加载 `ui-aesthetics` skill。
 - 前端实现 → 由 writer 角色基于 ui 的设计产物执行,或由 ui 直接实现。
-- 后端/通用 → writer 角色,默认用 `subagent`(packyapi/gpt-6.1-sol)。
+- 后端/通用 → writer 角色,默认用 `subagent`(packyapi/gpt-6.2-sol)。
 
 如果存在共享写入点(共享类型、接口 schema、生成客户端等),再额外拆一个 `shared` 子任务,默认串行执行(通常交给 writer)。
 
@@ -247,7 +247,7 @@ BDD(测试设计先行开关)默认关闭。
 编码类任务(writer / ui / fast)的完成判定必须走闭环:
 
 1. 编码完成后,主代理先把对应子任务/阶段标为 `[待验证]`。
-2. 委派 code-reviewer 做代码审查(输入包含:plan document 片段、验收标准、变更范围、diff/关键文件)。默认用 `subagent`(packyapi/gpt-6.1-sol)。
+2. 委派 code-reviewer 做代码审查(输入包含:plan document 片段、验收标准、变更范围、diff/关键文件)。默认用 `subagent`(packyapi/gpt-6.2-sol)。
 3. 通过后,主代理才能把状态改为 `[x]`。
 4. 未通过时,**先把 findings 汇报给用户并等待决定**(打回修复 / 接受 / 忽略),不得自行判断后静默进入修复回环。用户决定打回后,才把 findings 发回**原来的编码子代理**(用 `send_message` 唤醒,不要新开),只修复 findings,不扩大范围,修复后再次 `[待验证]` → review。
 
@@ -290,7 +290,7 @@ fast 的定位:小范围、低风险、单点明确的快速修改。它继承�
 - mixed / 前后端都要改 → 强制拆分 ui + writer,声明写入范围并做冲突锁
 - 只改前端 → 锁定为 ui,禁止顺手改后端
 - 只改后端 → 锁定为 writer,禁止顺手改前端
-- 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 / 用 packy / 走 packy / 用 6.1 sol → 切换 `subagent` 的 provider/model 参数(对应 opencode-go/kimi-k3 / deepseek-official/deepseek-flash / packyapi/gpt-6.1-sol / 省略继承;指定 packy 时一律 `packyapi/<model>`)
+- 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 / 用 packy / 走 packy / 用 6.1 sol / 用 6.2 sol → 切换 `subagent` 的 provider/model 参数(对应 opencode-go/kimi-k3 / deepseek-official/deepseek-flash / packyapi/gpt-6.2-sol / 省略继承;指定 packy 时一律 `packyapi/<model>`)
 
 ## 异常处理与等待策略
 

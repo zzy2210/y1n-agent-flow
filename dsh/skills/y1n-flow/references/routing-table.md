@@ -12,11 +12,11 @@
 | commit、diff、log、历史、提交记录、hash、blame | explorer | `subagent`(deepseek-official/deepseek-flash) | 优先使用只读 git 命令读取提交和历史事实 |
 | 设计、方案、架构、拆、规划、取舍、怎么做 | architect | `subagent`(packyapi/gpt-6-astra) | 架构设计、执行拆解、原始设计材料 |
 | UI、界面、前端视觉、美化、改样式、交互优化、产品感、精致、好看 | ui | `subagent`(opencode-go/kimi-k3) | 前端视觉与交互优化,加载 `ui-aesthetics` skill |
-| 写、实现、改、修、加、删、重构、落地、编码 | writer | `subagent`(packyapi/gpt-6.1-sol · xhigh) | 编码实现、修复问题、补测试 |
+| 写、实现、改、修、加、删、重构、落地、编码 | writer | `subagent`(packyapi/gpt-6.2-sol · xhigh) | 编码实现、修复问题、补测试 |
 | 快改、快修、小改、局部修补、fast | fast | `subagent`(省略 provider/model,继承主模型) | 小范围快速修改,适合明确、局部、低风险任务 |
-| 测试设计、测试方案、BDD、Given/When/Then | test-designer | `subagent`(packyapi/gpt-6.1-sol) | 只写测试设计材料,不写代码;先确认 BDD=开启 |
-| 审代码、评审代码、review 代码、代码 review | code-reviewer | `subagent`(packyapi/gpt-6.1-sol) | 审变更,找真正重要的问题,给通过/不通过 |
-| 审方案、评审方案、审文档、review 文档 | reviewer | `subagent`(packyapi/gpt-6.1-sol) | 偏差审查(raw vs polished),只报告不改稿 |
+| 测试设计、测试方案、BDD、Given/When/Then | test-designer | `subagent`(packyapi/gpt-6.2-sol) | 只写测试设计材料,不写代码;先确认 BDD=开启 |
+| 审代码、评审代码、review 代码、代码 review | code-reviewer | `subagent`(packyapi/gpt-6.2-sol) | 审变更,找真正重要的问题,给通过/不通过 |
+| 审方案、评审方案、审文档、review 文档 | reviewer | `subagent`(packyapi/gpt-6.2-sol) | 偏差审查(raw vs polished),只报告不改稿 |
 
 ## 路由优先级与回退链
 
@@ -28,7 +28,7 @@
 
 供应商优先级(GPT 线,同一模型多入口时):
 
-- `packyapi` > `openai-codex`(订阅)。6.1 sol 只存在于 packy;需要走订阅时,codex 侧用 `gpt-6-sol` / `gpt-5.6-sol` 顶替——**不存在 `openai-codex/gpt-6.1-sol`**。
+- `packyapi` > `openai-codex`(订阅)。sol 线(6.1 / 6.2)只存在于 packy;需要走订阅时,codex 侧用 `gpt-6-sol` / `gpt-5.6-sol` 顶替——**不存在 `openai-codex/gpt-6.1-sol` 或 `gpt-6.2-sol`**。
 - DS 线是另一套顺序:`deepseek-official` > `packyapi`(官方限流/额度不足时才切 packy;packy 的 DS 线不支持图片输入)。
 - UI 线只有 `opencode-go/kimi-k3`。
 
@@ -36,11 +36,11 @@
 
 | 角色 | 首选(默认) | 回退(需用户授权) |
 |---|---|---|
-| writer | `packyapi/gpt-6.1-sol` · xhigh | `openai-codex/gpt-6-sol` · xhigh → `packyapi/gpt-5.6-sol` · xhigh |
-| code-reviewer | `packyapi/gpt-6.1-sol` · max | `openai-codex/gpt-6-sol` · max |
-| reviewer | `packyapi/gpt-6.1-sol` · max | `openai-codex/gpt-6-sol` · max |
-| test-designer | `packyapi/gpt-6.1-sol` · max | `openai-codex/gpt-6-sol` · max |
-| architect | `packyapi/gpt-6-astra` · xhigh | `openai-codex/gpt-6-astra` · xhigh |
+| writer | `packyapi/gpt-6.2-sol` · xhigh | `packyapi/gpt-6.1-sol` · xhigh → `openai-codex/gpt-6-sol` · xhigh |
+| code-reviewer | `packyapi/gpt-6.2-sol` · max | `packyapi/gpt-6.1-sol` · max → `openai-codex/gpt-6-sol` · max |
+| reviewer | `packyapi/gpt-6.2-sol` · max | `packyapi/gpt-6.1-sol` · max → `openai-codex/gpt-6-sol` · max |
+| test-designer | `packyapi/gpt-6.2-sol` · max | `packyapi/gpt-6.1-sol` · max → `openai-codex/gpt-6-sol` · max |
+| architect | `packyapi/gpt-6-astra` · xhigh | `openai-codex/gpt-6-astra` · xhigh → `packyapi/gpt-6.2-astra` · xhigh |
 | explorer | `deepseek-official/deepseek-flash` · low | `packyapi/deepseek-flash` · low |
 | ui | `opencode-go/kimi-k3` · max | 无替代线,失败即上报 |
 | fast | 继承主代理模型 | — |
@@ -56,7 +56,7 @@
 | mixed / 前后端都要改 | 强制拆分 | ui + writer,声明写入范围并做冲突锁 |
 | 只改前端 | 锁定 ui | 禁止顺手改后端 |
 | 只改后端 | 锁定 writer | 禁止顺手改前端 |
-| 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 / 用 packy / 走 packy / 用 6.1 sol | 切换模型参数 | `subagent` 的 provider/model 参数对应 opencode-go/kimi-k3 / deepseek-official/deepseek-flash / packyapi/gpt-6.1-sol / 省略继承;指定 packy 时一律 `packyapi/<model>` |
+| 用 kimi / 用轻量模型 / 用重模型 / 用当前模型 / 用 packy / 走 packy / 用 6.1 sol / 用 6.2 sol | 切换模型参数 | `subagent` 的 provider/model 参数对应 opencode-go/kimi-k3 / deepseek-official/deepseek-flash / packyapi/gpt-6.2-sol / 省略继承;指定 packy 时一律 `packyapi/<model>` |
 
 ## 路由原则
 
@@ -97,14 +97,14 @@
 
 | 供应商 id | 性质 | 可用模型(本流程相关) | 默认用途 |
 |---|---|---|---|
-| `packyapi`(packy) | OpenAI 兼容网关(cf.api.fan,Responses 协议) | GPT 线:gpt-6.1-sol、gpt-6-astra、gpt-6-sol、gpt-5.6-sol、codex-auto-review;DS 线:deepseek-flash、deepseek-v4-pro | 编码 `packyapi/gpt-6.1-sol`;架构 `packyapi/gpt-6-astra`;DS 备选 |
+| `packyapi`(packy) | OpenAI 兼容网关(cf.api.fan,Responses 协议) | GPT 线:gpt-6.2-sol、gpt-6.2-astra、gpt-6.1-sol、gpt-6-astra、gpt-6-sol、gpt-5.6-sol、codex-auto-review;DS 线:deepseek-flash、deepseek-v4-pro | 编码 `packyapi/gpt-6.2-sol`;架构 `packyapi/gpt-6-astra`;DS 备选 |
 | `openai-codex` | ChatGPT 订阅路由 | gpt-6-astra、gpt-6-sol、gpt-6-luna、gpt-5.6-sol、gpt-5.6-terra 等 | 回退路由(需授权) |
 | `deepseek-official` | DeepSeek 官方 | deepseek-flash(1M 上下文)、deepseek-v4-pro | 探索 `deepseek-official/deepseek-flash`;重活 v4-pro |
 | `opencode-go` | OpenCode Go | kimi-k3 | UI/视觉 `opencode-go/kimi-k3` |
 
 选择规则:
 
-1. **6.1 sol 只在 packy 侧**:`openai-codex` 的模型目录没有 `gpt-6.1-sol`,写成 `openai-codex/gpt-6.1-sol` 会在解析阶段直接 `UNKNOWN_MODEL`。编码默认固定 `packyapi/gpt-6.1-sol`。
+1. **sol 线只在 packy 侧**:`openai-codex` 的模型目录没有 `gpt-6.1-sol` / `gpt-6.2-sol`,写成 `openai-codex/<sol 模型>` 会在解析阶段直接 `UNKNOWN_MODEL`。编码默认固定 `packyapi/gpt-6.2-sol`。
 2. **架构双入口**:`packyapi/gpt-6-astra` 与 `openai-codex/gpt-6-astra` 是同一模型;按供应商优先级用 packy,codex 为备选。
 3. **DS 官方线与 packy 线的档位不同**:`deepseek-official` 只有 `off / low / high / max`;`packyapi` 的 DS 线接受 `none / minimal / low / medium / high / xhigh / max` 全档,但**不接受 `off`**(已映射 none)。
 4. **显式优先级**:用户点名供应商 > 用户点名模型 > 上表默认。用户说"用 packy"时不要在 `openai-codex` 下找同名模型。
@@ -129,7 +129,9 @@
 |---|---|---|
 | openai-codex/gpt-6-astra | xhigh | 架构类备选 |
 | packyapi/gpt-6-astra | xhigh | 架构类(默认) |
-| packyapi/gpt-6.1-sol | xhigh(编码) / max(评审、测试设计) | 编码/评审主力 |
+| packyapi/gpt-6.2-sol | xhigh(编码) / max(评审、测试设计) | 编码/评审主力 |
+| packyapi/gpt-6.1-sol | xhigh(编码) / max(评审、测试设计) | 上一代,回退用 |
+| packyapi/gpt-6.2-astra | xhigh | 架构备选(显式指定时) |
 | openai-codex/gpt-6-sol | xhigh(编码回退) / max(评审回退) | 回退路由 |
 | packyapi/gpt-5.6-sol | xhigh | 回退路由 |
 | opencode-go/kimi-k3 | max | UI/视觉 |
@@ -149,9 +151,9 @@
 
 ```text
 [路由] architect · subagent · packyapi/gpt-6-astra · xhigh
-[路由] writer · subagent · packyapi/gpt-6.1-sol · xhigh
+[路由] writer · subagent · packyapi/gpt-6.2-sol · xhigh
 [路由] explorer · subagent · deepseek-official/deepseek-flash · low
-[路由] reviewer · subagent · packyapi/gpt-6.1-sol · max
+[路由] reviewer · subagent · packyapi/gpt-6.2-sol · max
 ```
 
 - 省略 provider/model(继承)时: `[路由] fast · subagent · 继承主代理模型`
