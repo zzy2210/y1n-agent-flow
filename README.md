@@ -36,9 +36,15 @@ y1n-flow —— 多模型编排开发流的 DSH(DeepSeek Harness)预设配置仓
       # …
 ```
 
-配置已适配 DSH `0.2.1-rc.2`。该版本不再支持 `toolFilter`,运行时会以 `DELEGATED_CALLER` 拒绝仍由父代理管理的子代理调用 `ask_user_question`;子代理应把问题交回主代理。这里依赖原生调用校验,不保证工具在子代理目录中隐藏。
+配置已适配 DSH `0.2.2-rc.5`，要求 Node.js 24.9 或更高。spawn 使用 `modelSelection: true` 和 `modelDiscovery: true`；`list_agents` 已由主控制插件注册，不再挂载旧 `/list-agents` 子路径。控制插件显式保留 `interrupt: true`。
+
+委派返回 `{ kind: 'activation', name }`；续接使用 `send_message({ agent: name, message })`，中断使用 `interrupt_agent({ agent: name })`。模型路由白名单在新会话创建时记录；没有对应策略的旧会话不能假定自动获得跨模型授权，升级后应验证或在新会话继续编排。
+
+运行时会拒绝仍由父代理管理的子代理直接向用户提问；子代理应把问题交回主代理。这里依赖原生调用校验，不保证工具在子代理目录中隐藏。
 
 委派由运行时统一管理,完成后发送结果通知;配置中不再保留旧的 `enableRunInBackground` / `backgroundMode` 字段。若将来需要独立的子代理工具集,应声明单独的 Agent Preset 并在 spawn 配置中指定 `agentPreset`;fork 不支持独立预设选择。
+
+当前工作目录由宿主的 `working-directory` 服务放入必需的运行时上下文。persona 不再引用 `{{cwd}}`:该变量在当前版本未注册,预设列表仍会正常显示,但发送消息时的严格模板渲染会失败。升级检查应同时覆盖预设加载和提示词渲染。
 
 ## 上下文分层(为什么 persona 很短)
 

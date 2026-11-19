@@ -28,12 +28,13 @@
       # ── identity ────────────────────────────────────────────────────────────────
 
       # The preset's own persona, shadowing the deployment default for this agent.
-      # `{{model}}` and `{{cwd}}` resolve from the agent's own route and workspace.
+      # `{{model}}` resolves from the agent's route. The host's working-directory
+      # service supplies the current directory as required runtime context.
       - id: persona
         name: '@deepseek-ai/dsh-persona'
         config:
           prefix: |-
-            你是 y1n-flow 团队的一员,运行在 DeepSeek Harness 上,模型为 {{model}},工作目录 {{cwd}}。所有对话与代码注释一律使用中文。
+            你是 y1n-flow 团队的一员,运行在 DeepSeek Harness 上,模型为 {{model}}。当前工作目录以宿主提供的运行时上下文为准。所有对话与代码注释一律使用中文。
 
             角色由本次任务说明决定,不由这段话决定:
             - 任务说明指定了具体角色(编排者 / explorer / architect / writer / ui / reviewer …),你就是该角色,按对应契约执行,不再向下委派。
@@ -78,6 +79,8 @@
       # they need no realm. The `fs` service and its policy stay in the host.
       - id: tool-fs
         name: '@deepseek-ai/dsh-tool-fs'
+        config:
+          applyPatch: false
 
       - id: tool-fs-search
         name: '@deepseek-ai/dsh-tool-fs-search'
@@ -211,9 +214,8 @@
         config:
           - id: tool-subagent-control
             name: '@deepseek-ai/dsh-tool-subagent-control'
-
-          - id: tool-subagent-list-agents
-            name: '@deepseek-ai/dsh-tool-subagent-control/list-agents'
+            config:
+              interrupt: true
 
           # 委派工具:DSH 原生 tool-subagent。spawn 开启模型选择,
           # provider / model / reasoning_effort 由主代理在调用时决定。
@@ -226,7 +228,8 @@
             config:
               provider: spawn
               toolName: subagent
-              modelSelectionSettings: true
+              modelSelection: true
+              modelDiscovery: true
 
           # fork 继承已完成历史和父代理模型,不启用独立模型或预设选择。
           - id: tool-subagent-fork
