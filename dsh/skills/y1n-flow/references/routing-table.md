@@ -10,7 +10,7 @@
 |---|---|---|---|
 | 看、查、探、找、搜、读、列、现状、结构、在哪 | explorer | `subagent`(deepseek-official/deepseek-flash) | 只读探索、代码现状、资料检索 |
 | commit、diff、log、历史、提交记录、hash、blame | explorer | `subagent`(deepseek-official/deepseek-flash) | 优先使用只读 git 命令读取提交和历史事实 |
-| 设计、方案、架构、拆、规划、取舍、怎么做 | architect | `subagent`(packyapi/gpt-6-astra) | 架构设计、执行拆解、原始设计材料 |
+| 设计、方案、架构、拆、规划、取舍、怎么做 | architect | `subagent`(packyapi/gpt-6.2-astra) | 架构设计、执行拆解、原始设计材料 |
 | UI、界面、前端视觉、美化、改样式、交互优化、产品感、精致、好看 | ui | `subagent`(opencode-go/kimi-k3) | 前端视觉与交互优化,加载 `ui-aesthetics` skill |
 | 写、实现、改、修、加、删、重构、落地、编码 | writer | `subagent`(packyapi/gpt-6.2-sol · xhigh) | 编码实现、修复问题、补测试 |
 | 快改、快修、小改、局部修补、fast | fast | `subagent`(省略 provider/model,继承主模型) | 小范围快速修改,适合明确、局部、低风险任务 |
@@ -40,7 +40,7 @@
 | code-reviewer | `packyapi/gpt-6.2-sol` · max | `packyapi/gpt-6.1-sol` · max → `openai-codex/gpt-6-sol` · max |
 | reviewer | `packyapi/gpt-6.2-sol` · max | `packyapi/gpt-6.1-sol` · max → `openai-codex/gpt-6-sol` · max |
 | test-designer | `packyapi/gpt-6.2-sol` · max | `packyapi/gpt-6.1-sol` · max → `openai-codex/gpt-6-sol` · max |
-| architect | `packyapi/gpt-6-astra` · xhigh | `openai-codex/gpt-6-astra` · xhigh → `packyapi/gpt-6.2-astra` · xhigh |
+| architect | `packyapi/gpt-6.2-astra` · xhigh | `packyapi/gpt-6-astra` · xhigh → `openai-codex/gpt-6-astra` · xhigh |
 | explorer | `deepseek-official/deepseek-flash` · low | `packyapi/deepseek-flash` · low |
 | ui | `opencode-go/kimi-k3` · max | 无替代线,失败即上报 |
 | fast | 继承主代理模型 | — |
@@ -97,7 +97,7 @@
 
 | 供应商 id | 性质 | 可用模型(本流程相关) | 默认用途 |
 |---|---|---|---|
-| `packyapi`(packy) | OpenAI 兼容网关(cf.api.fan,Responses 协议) | GPT 线:gpt-6.2-sol、gpt-6.2-astra、gpt-6.1-sol、gpt-6-astra、gpt-6-sol、gpt-5.6-sol、codex-auto-review;DS 线:deepseek-flash、deepseek-v4-pro | 编码 `packyapi/gpt-6.2-sol`;架构 `packyapi/gpt-6-astra`;DS 备选 |
+| `packyapi`(packy) | OpenAI 兼容网关(cf.api.fan,Responses 协议) | GPT 线:gpt-6.2-sol、gpt-6.2-astra、gpt-6.1-sol、gpt-6-astra、gpt-6-sol、gpt-5.6-sol、codex-auto-review;DS 线:deepseek-flash、deepseek-v4-pro | 编码 `packyapi/gpt-6.2-sol`;架构 `packyapi/gpt-6.2-astra`;DS 备选 |
 | `openai-codex` | ChatGPT 订阅路由 | gpt-6-astra、gpt-6-sol、gpt-6-luna、gpt-5.6-sol、gpt-5.6-terra 等 | 回退路由(需授权) |
 | `deepseek-official` | DeepSeek 官方 | deepseek-flash(1M 上下文)、deepseek-v4-pro | 探索 `deepseek-official/deepseek-flash`;重活 v4-pro |
 | `opencode-go` | OpenCode Go | kimi-k3 | UI/视觉 `opencode-go/kimi-k3` |
@@ -105,7 +105,7 @@
 选择规则:
 
 1. **sol 线只在 packy 侧**:`openai-codex` 的模型目录没有 `gpt-6.1-sol` / `gpt-6.2-sol`,写成 `openai-codex/<sol 模型>` 会在解析阶段直接 `UNKNOWN_MODEL`。编码默认固定 `packyapi/gpt-6.2-sol`。
-2. **架构双入口**:`packyapi/gpt-6-astra` 与 `openai-codex/gpt-6-astra` 是同一模型;按供应商优先级用 packy,codex 为备选。
+2. **架构三入口**:`packyapi/gpt-6.2-astra`(默认)与 `packyapi/gpt-6-astra`、`openai-codex/gpt-6-astra` 同族;按供应商优先级 packy 优先,codex 为最后回退。
 3. **DS 官方线与 packy 线的档位不同**:`deepseek-official` 只有 `off / low / high / max`;`packyapi` 的 DS 线接受 `none / minimal / low / medium / high / xhigh / max` 全档,但**不接受 `off`**(已映射 none)。
 4. **显式优先级**:用户点名供应商 > 用户点名模型 > 上表默认。用户说"用 packy"时不要在 `openai-codex` 下找同名模型。
 5. **DS 双入口**:`packyapi/deepseek-flash` 与 `deepseek-official/deepseek-flash` 是同一模型的两个计费入口。默认走官方;官方限流/额度不足,或用户明确说"走 packy 额度"时才切 packy 线。packy 的 DS 线不支持图片输入。
@@ -127,11 +127,11 @@
 
 | 模型 | 标准档位 | 用途定位 |
 |---|---|---|
-| openai-codex/gpt-6-astra | xhigh | 架构类备选 |
-| packyapi/gpt-6-astra | xhigh | 架构类(默认) |
+| packyapi/gpt-6.2-astra | xhigh | 架构类(默认) |
+| packyapi/gpt-6-astra | xhigh | 架构类(上一代,回退用) |
+| openai-codex/gpt-6-astra | xhigh | 架构类(订阅侧最后回退) |
 | packyapi/gpt-6.2-sol | xhigh(编码) / max(评审、测试设计) | 编码/评审主力 |
 | packyapi/gpt-6.1-sol | xhigh(编码) / max(评审、测试设计) | 上一代,回退用 |
-| packyapi/gpt-6.2-astra | xhigh | 架构备选(显式指定时) |
 | openai-codex/gpt-6-sol | xhigh(编码回退) / max(评审回退) | 回退路由 |
 | packyapi/gpt-5.6-sol | xhigh | 回退路由 |
 | opencode-go/kimi-k3 | max | UI/视觉 |
@@ -150,7 +150,7 @@
 调用子代理前,先输出一行提示:
 
 ```text
-[路由] architect · subagent · packyapi/gpt-6-astra · xhigh
+[路由] architect · subagent · packyapi/gpt-6.2-astra · xhigh
 [路由] writer · subagent · packyapi/gpt-6.2-sol · xhigh
 [路由] explorer · subagent · deepseek-official/deepseek-flash · low
 [路由] reviewer · subagent · packyapi/gpt-6.2-sol · max

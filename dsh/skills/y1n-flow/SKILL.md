@@ -138,7 +138,7 @@ description: 多模型编排开发流(仅供主代理编排时使用):主代理�
 ### 子代理使用顺序(固定)
 
 1. explorer:先拿到真实现状(文件路径、现有行为、约束证据)。默认用 `subagent`(deepseek-official/deepseek-flash)。
-2. architect:基于现状给出原始设计材料(拆分、风险、待确认项、建议顺序)。默认用 `subagent`(openai-codex/gpt-6-astra)。
+2. architect:基于现状给出原始设计材料(拆分、风险、待确认项、建议顺序)。默认用 `subagent`(packyapi/gpt-6.2-astra)。
 3. test-designer:仅当 BDD 开启时,产出原始测试设计材料(覆盖核心/边界场景与验收口径)。默认用 `subagent`(packyapi/gpt-6.2-sol)。
 
 ### 设计阶段的输出规则

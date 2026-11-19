@@ -2,7 +2,7 @@
 
 y1n-flow —— 多模型编排开发流的 DSH(DeepSeek Harness)预设配置仓库。
 
-主代理担任项目编排者(项目经理/指挥官),把探索 / 设计 / 测试设计 / 编码 / 前端 / 审查等角色委派给绑定不同模型的子代理(`packyapi/gpt-6.2-sol`、`openai-codex/gpt-6-astra`、`deepseek-official/deepseek-flash`、`opencode-go/kimi-k3`),以 plan document 为唯一事实来源,内置编码验证闭环与可续接子代理机制。
+主代理担任项目编排者(项目经理/指挥官),把探索 / 设计 / 测试设计 / 编码 / 前端 / 审查等角色委派给绑定不同模型的子代理(`packyapi/gpt-6.2-sol`、`packyapi/gpt-6.2-astra`、`deepseek-official/deepseek-flash`、`opencode-go/kimi-k3`),以 plan document 为唯一事实来源,内置编码验证闭环与可续接子代理机制。
 
 ## 目录结构
 
@@ -63,7 +63,7 @@ y1n-flow —— 多模型编排开发流的 DSH(DeepSeek Harness)预设配置仓
 | 角色 | 默认路由 | 默认档位 | 回退(需用户授权) |
 |---|---|---|---|
 | explorer | `deepseek-official/deepseek-flash` | low | `packyapi/deepseek-flash` |
-| architect | `packyapi/gpt-6-astra` | xhigh | `openai-codex/gpt-6-astra` |
+| architect | `packyapi/gpt-6.2-astra` | xhigh | `packyapi/gpt-6-astra` → `openai-codex/gpt-6-astra` |
 | writer | `packyapi/gpt-6.2-sol` | xhigh | `packyapi/gpt-6.1-sol` → `openai-codex/gpt-6-sol` |
 | test-designer / code-reviewer / reviewer | `packyapi/gpt-6.2-sol` | max | `packyapi/gpt-6.1-sol` → `openai-codex/gpt-6-sol` |
 | ui | `opencode-go/kimi-k3` | max | 无替代线 |
