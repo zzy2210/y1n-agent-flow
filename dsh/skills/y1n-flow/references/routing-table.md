@@ -144,6 +144,8 @@
 - **DS 两个入口的档位不同**:`deepseek-official` 只有 `off / low / high / max`(传 `medium` 会 `UNSUPPORTED_REASONING_EFFORT`);`packyapi` 的 DS 线接受全档,但**不接受 `off`**(已映射为 none)。
 - 主代理自身的档位由会话模型选择决定,工具不干预。
 - 路由白名单在 `profiles/web/cordis.patch.yml` 的 `subagent-model-selection-settings.allowedModels`;要新增可用路由改那里。
+- 白名单在**会话创建时写进该会话的快照**:改完配置要重启 dsh,且只有**新会话**才生效;旧会话及其子代理继续按旧白名单拒绝(报 `child LLM route "…" is not allowed for this Session`)。新增 provider 模型同理,不重启不会出现在 `list_subagent_models` 里。
+- `provider` 参数只认注册 id:`packyapi`,不是口头简称 `packy`;写 `packy` 会被当成未授权 provider 拒绝。
 
 ## 路由提示格式
 
